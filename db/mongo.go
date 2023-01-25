@@ -1,6 +1,8 @@
 package db
 
 import (
+	"blockchain/block"
+	"blockchain/user"
 	"context"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
@@ -9,8 +11,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"log"
-	"myproject/block"
-	"myproject/user"
 )
 
 type Mongo struct {

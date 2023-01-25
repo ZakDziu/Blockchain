@@ -1,13 +1,13 @@
 package modules
 
 import (
+	"blockchain/auth"
+	"blockchain/db"
+	"blockchain/user"
 	"encoding/json"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"myproject/auth"
-	"myproject/db"
-	"myproject/user"
 	"net/http"
 	"time"
 )

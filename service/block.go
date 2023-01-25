@@ -1,8 +1,8 @@
 package service
 
 import (
-	"myproject/block"
-	"myproject/db"
+	"blockchain/block"
+	"blockchain/db"
 	"time"
 )
 

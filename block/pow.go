@@ -1,12 +1,12 @@
 package block
 
 import (
+	"blockchain/utils"
 	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"math"
 	"math/big"
-	"myproject/utils"
 )
 
 const targetBits = 15
@@ -33,7 +33,6 @@ func (pow *ProofOfWork) prepareData(nonce int) []byte {
 	data := bytes.Join(
 		[][]byte{
 			pow.block.PrevBlockHash,
-			[]byte(fmt.Sprintf("%v", pow.block.Data)),
 			utils.IntToHex(pow.block.Timestamp),
 			utils.IntToHex(int64(targetBits)),
 			utils.IntToHex(int64(nonce)),
@@ -51,7 +50,6 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 	for nonce < maxNonce {
 		data := pow.prepareData(nonce)
 		hash = sha256.Sum256(data)
-		fmt.Printf("\r%x", hash)
 		hashInt.SetBytes(hash[:])
 
 		if hashInt.Cmp(pow.target) == -1 {

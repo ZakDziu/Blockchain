@@ -1,10 +1,10 @@
 package auth
 
 import (
+	"blockchain/user"
 	"errors"
 	"github.com/golang-jwt/jwt"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"myproject/user"
 	"time"
 )
 

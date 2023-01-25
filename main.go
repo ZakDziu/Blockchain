@@ -1,14 +1,14 @@
 package main
 
 import (
+	"blockchain/block"
+	"blockchain/db"
+	"blockchain/modules"
+	"blockchain/service"
 	"context"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"log"
-	"myproject/block"
-	"myproject/db"
-	"myproject/modules"
-	"myproject/service"
 	"net/http"
 )
 
