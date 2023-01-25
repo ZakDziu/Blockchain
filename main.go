@@ -18,7 +18,7 @@ func main() {
 	defer mongo.DeleteDataAndCloseConnection(ctx)
 
 	bc := block.NewBlockchain(ctx, mongo.DB.Block)
-
+	service.CreateUsers(mongo)
 	go service.StartAddBlockService(bc)
 	go service.StartMakeTransactions(mongo)
 

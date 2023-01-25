@@ -1,12 +1,12 @@
 package modules
 
 import (
+	"blockchain/auth"
+	"blockchain/block"
+	"blockchain/db"
 	"encoding/json"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
-	"myproject/auth"
-	"myproject/block"
-	"myproject/db"
 	"net/http"
 	"strconv"
 	"time"

@@ -4,7 +4,6 @@ import (
 	"blockchain/utils"
 	"bytes"
 	"crypto/sha256"
-	"fmt"
 	"math"
 	"math/big"
 )
@@ -58,7 +57,6 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 			nonce++
 		}
 	}
-	fmt.Print("\n\n")
 
 	return nonce, hash[:]
 }
