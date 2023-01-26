@@ -25,6 +25,12 @@ func (bc *Blockchain) AddBlock() {
 }
 
 func NewGenesisBlock(ctx context.Context, db *mongo.Collection) *Block {
+	opts := options.FindOne().SetSort(bson.M{"$natural": -1})
+	var lastBlock Block
+	_ = db.FindOne(ctx, bson.M{}, opts).Decode(&lastBlock)
+	if lastBlock.Timestamp != 0 {
+		return NewBlock(ctx, db, lastBlock.Hash, lastBlock.BlockNumber)
+	}
 	return NewBlock(ctx, db, []byte{}, -1)
 }
 

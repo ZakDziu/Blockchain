@@ -79,6 +79,8 @@ func (m *Mongo) AddNewBlock(b block.Block) error {
 func (m *Mongo) GetAllBlocks(hashId string, addressSender, addressRecipient uint32, blockNumer int, transactionCreatedAt int64, page, pageSize int) []*block.Block {
 	var blocks []*block.Block
 	filter := bson.M{}
+	if hashId != "" {
+	}
 	if addressSender != 0 {
 		filter["data"] = bson.M{"$elemMatch": bson.M{"addresssender": addressSender}}
 		if addressRecipient != 0 {
@@ -143,11 +145,13 @@ func (m *Mongo) CreateNewUser(newUser user.User) (user.User, error) {
 	return newUser, err
 }
 
-func (m *Mongo) GetUser(id primitive.ObjectID) (user.User, error) {
+func (m *Mongo) GetUserByName(name string) bool {
 	var u user.User
-	opts := options.FindOne().SetSort(bson.M{"_id": id})
-	err := m.DB.Block.FindOne(m.ctx, bson.M{}, opts).Decode(&u)
-	return u, err
+	_ = m.DB.User.FindOne(m.ctx, bson.M{"name": name}).Decode(&u)
+	if u.ID != primitive.NilObjectID {
+		return true
+	}
+	return false
 }
 
 func (m *Mongo) CheckExistUser(name string) (bool, error) {

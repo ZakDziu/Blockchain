@@ -1,4 +1,4 @@
-package modules
+package handlers
 
 import (
 	"blockchain/auth"
@@ -24,7 +24,7 @@ func NewTransaction(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Error:  err.Error(),
 			Status: http.StatusBadRequest,
 		})
@@ -34,7 +34,7 @@ func NewTransaction(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	body.AddressSender, err = auth.GetUserAddress(authToken)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Error:  err.Error(),
 			Status: http.StatusBadRequest,
 		})
@@ -45,7 +45,7 @@ func NewTransaction(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	err = mongo.UpdatesWithCreateNewTransaction(body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Error:  err.Error(),
 			Status: http.StatusBadRequest,
 		})
@@ -53,7 +53,7 @@ func NewTransaction(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	}
 
 	response := NewTransactionResponse{Message: fmt.Sprintf("%v send to the %v", body.Sum, body.AddressRecipient)}
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 func Blocks(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -70,5 +70,5 @@ func Blocks(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	mongo := db.GetDB(ctx)
 	blocks := mongo.GetAllBlocks(hashId, uint32(addressSender), uint32(addressRecipient), blockNumber, int64(transactionCreatedAt), page, pageSize)
 
-	json.NewEncoder(w).Encode(blocks)
+	_ = json.NewEncoder(w).Encode(blocks)
 }

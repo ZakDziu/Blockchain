@@ -3,7 +3,7 @@ package main
 import (
 	"blockchain/block"
 	"blockchain/db"
-	"blockchain/modules"
+	"blockchain/handlers"
 	"blockchain/service"
 	"context"
 	"fmt"
@@ -28,10 +28,10 @@ func main() {
 
 func router() *httprouter.Router {
 	r := httprouter.New()
-	r.POST("/sign-up", modules.SignUp)
-	r.POST("/sign-in", modules.SignIn)
-	r.POST("/transaction", modules.NewTransaction)
-	r.GET("/blocks", modules.Blocks)
+	r.POST("/sign-up", handlers.SignUp)
+	r.POST("/sign-in", handlers.SignIn)
+	r.POST("/transaction", handlers.NewTransaction)
+	r.GET("/blocks", handlers.Blocks)
 
 	return r
 }

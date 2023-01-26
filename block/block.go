@@ -2,6 +2,7 @@ package block
 
 import (
 	"context"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"log"
 	"time"
@@ -39,8 +40,14 @@ func NewBlock(ctx context.Context, db *mongo.Collection, prevBlockHash []byte, p
 
 	block.Hash = hash[:]
 	block.Nonce = nonce
-
-	_, err := db.InsertOne(ctx, block)
+	_, err := db.UpdateMany(ctx, bson.M{}, bson.M{"$inc": bson.M{"numberofconfirmations": 1}})
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = db.InsertOne(ctx, block)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
