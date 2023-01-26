@@ -48,9 +48,6 @@ func NewBlock(ctx context.Context, db *mongo.Collection, prevBlockHash []byte, p
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	return block
 }

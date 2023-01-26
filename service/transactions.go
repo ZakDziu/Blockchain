@@ -3,6 +3,7 @@ package service
 import (
 	"blockchain/block"
 	"blockchain/db"
+	"log"
 	"time"
 )
 
@@ -15,6 +16,9 @@ func StartMakeTransactions(mongo *db.Mongo) {
 		CreatedAt:        time.Now().Unix(),
 	}
 	transaction.CalculateGas()
-	_ = mongo.UpdatesWithCreateNewTransaction(transaction)
+	err := mongo.UpdatesWithCreateNewTransaction(transaction)
+	if err != nil {
+		log.Panic(err)
+	}
 	StartMakeTransactions(mongo)
 }

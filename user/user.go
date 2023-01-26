@@ -3,6 +3,7 @@ package user
 import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"hash/fnv"
+	"log"
 )
 
 const AdminName = "zakhar"
@@ -20,6 +21,9 @@ type User struct {
 
 func (u *User) GenerateUserAddress() {
 	h := fnv.New32a()
-	h.Write([]byte(u.Name + u.Password))
+	_, err := h.Write([]byte(u.Name + u.Password))
+	if err != nil {
+		log.Panic(err)
+	}
 	u.Address = h.Sum32()
 }

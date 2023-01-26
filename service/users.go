@@ -3,6 +3,7 @@ package service
 import (
 	"blockchain/db"
 	"blockchain/user"
+	"log"
 	"time"
 )
 
@@ -30,13 +31,22 @@ func CreateUsers(mongo *db.Mongo) {
 	}
 
 	if !mongo.GetUserByName(sender.Name) {
-		_, _ = mongo.CreateNewUser(sender)
+		_, err := mongo.CreateNewUser(sender)
+		if err != nil {
+			log.Panic(err)
+		}
 	}
 	if !mongo.GetUserByName(recipient.Name) {
-		_, _ = mongo.CreateNewUser(recipient)
+		_, err := mongo.CreateNewUser(recipient)
+		if err != nil {
+			log.Panic(err)
+		}
 	}
 	if !mongo.GetUserByName(admin.Name) {
-		_, _ = mongo.CreateNewUser(admin)
+		_, err := mongo.CreateNewUser(admin)
+		if err != nil {
+			log.Panic(err)
+		}
 	}
 
 }

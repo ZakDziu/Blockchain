@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"github.com/julienschmidt/httprouter"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"log"
 	"net/http"
 	"time"
 )
@@ -32,20 +33,26 @@ func SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(ErrorResponse{
+		err = json.NewEncoder(w).Encode(ErrorResponse{
 			Error:  err.Error(),
 			Status: http.StatusInternalServerError,
 		})
+		if err != nil {
+			log.Panic(err)
+		}
 		return
 	}
 	mongo := db.GetDB(ctx)
 	b, err := mongo.CheckExistUser(body.Name)
 	if b {
 		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(ErrorResponse{
+		err = json.NewEncoder(w).Encode(ErrorResponse{
 			Error:  "User with this username exist",
 			Status: http.StatusBadRequest,
 		})
+		if err != nil {
+			log.Panic(err)
+		}
 		return
 	}
 	body.CreatedAt = time.Now().Unix()
@@ -53,15 +60,22 @@ func SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	u, err := mongo.CreateNewUser(body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(ErrorResponse{
+		err = json.NewEncoder(w).Encode(ErrorResponse{
 			Error:  err.Error(),
 			Status: http.StatusInternalServerError,
 		})
+		if err != nil {
+			log.Panic(err)
+		}
 		return
 	}
 	token, err := auth.GenerateJWT(u)
 	response := TokenResponse{Token: token}
-	_ = json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		log.Panic(err)
+	}
+	return
 }
 
 func SignIn(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -71,24 +85,33 @@ func SignIn(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(ErrorResponse{
+		err = json.NewEncoder(w).Encode(ErrorResponse{
 			Error:  err.Error(),
 			Status: http.StatusBadRequest,
 		})
+		if err != nil {
+			log.Panic(err)
+		}
 		return
 	}
 	mongo := db.GetDB(ctx)
 	u, err := mongo.CheckUserCredentials(body.Name, body.Password)
 	if u.ID == primitive.NilObjectID {
 		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(ErrorResponse{
+		err = json.NewEncoder(w).Encode(ErrorResponse{
 			Error:  "User not exist",
 			Status: http.StatusBadRequest,
 		})
+		if err != nil {
+			log.Panic(err)
+		}
 		return
 	}
 	token, err := auth.GenerateJWT(u)
 	response := TokenResponse{Token: token}
-	_ = json.NewEncoder(w).Encode(response)
-
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		log.Panic(err)
+	}
+	return
 }

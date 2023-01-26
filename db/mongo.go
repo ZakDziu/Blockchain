@@ -71,11 +71,6 @@ func (m *Mongo) GetLastBlock() (block.Block, error) {
 	return lastBlock, err
 }
 
-func (m *Mongo) AddNewBlock(b block.Block) error {
-	_, err := m.DB.Block.InsertOne(m.ctx, b)
-	return err
-}
-
 func (m *Mongo) GetAllBlocks(hashId string, addressSender, addressRecipient uint32, blockNumer int, transactionCreatedAt int64, page, pageSize int) []*block.Block {
 	var blocks []*block.Block
 	filter := bson.M{}
@@ -147,7 +142,10 @@ func (m *Mongo) CreateNewUser(newUser user.User) (user.User, error) {
 
 func (m *Mongo) GetUserByName(name string) bool {
 	var u user.User
-	_ = m.DB.User.FindOne(m.ctx, bson.M{"name": name}).Decode(&u)
+	err := m.DB.User.FindOne(m.ctx, bson.M{"name": name}).Decode(&u)
+	if err != nil {
+		log.Panic(err)
+	}
 	if u.ID != primitive.NilObjectID {
 		return true
 	}
@@ -204,11 +202,35 @@ func (m *Mongo) UpdatesWithCreateNewTransaction(t block.Transaction) error {
 	updateAdmin := bson.M{"$set": bson.M{"balance": admin.Balance + t.Gas}}
 	updateBlock := bson.M{"$set": bson.M{"data": lastBlock.Data}}
 
-	_, err = session.WithTransaction(context.TODO(), func(ctx mongo.SessionContext) (interface{}, error) {
+	_, err = session.WithTransaction(m.ctx, func(ctx mongo.SessionContext) (interface{}, error) {
 		_, err = m.DB.Block.UpdateOne(m.ctx, filterBlock, updateBlock)
+		if err != nil {
+			err = session.AbortTransaction(ctx)
+			if err != nil {
+				log.Panic(err)
+			}
+		}
 		_, err = m.DB.User.UpdateOne(m.ctx, filterRecipient, updateRecipient)
+		if err != nil {
+			err = session.AbortTransaction(ctx)
+			if err != nil {
+				log.Panic(err)
+			}
+		}
 		_, err = m.DB.User.UpdateOne(m.ctx, filterAdmin, updateAdmin)
+		if err != nil {
+			err = session.AbortTransaction(ctx)
+			if err != nil {
+				log.Panic(err)
+			}
+		}
 		result, err := m.DB.User.UpdateOne(m.ctx, filterSender, updateSender)
+		if err != nil {
+			err = session.AbortTransaction(ctx)
+			if err != nil {
+				log.Panic(err)
+			}
+		}
 
 		return result, err
 	}, txnOptions)
