@@ -11,24 +11,24 @@ func CreateUsers(mongo *db.Mongo) {
 	sender := user.User{
 		Name:      "sender",
 		Password:  "myPass",
-		Address:   3675513191,
 		Balance:   1000000,
 		CreatedAt: time.Now().Unix(),
 	}
+	sender.AddAddress()
 	recipient := user.User{
 		Name:      "recipient",
 		Password:  "myPass",
-		Address:   441489459,
 		Balance:   0,
 		CreatedAt: time.Now().Unix(),
 	}
+	recipient.AddAddress()
 	admin := user.User{
-		Name:      user.AdminName,
+		Name:      "admin",
 		Password:  "myPass",
-		Address:   2497565411,
 		Balance:   0,
 		CreatedAt: time.Now().Unix(),
 	}
+	admin.AddAddress()
 
 	if !mongo.GetUserByName(sender.Name) {
 		_, err := mongo.CreateNewUser(sender)

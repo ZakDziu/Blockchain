@@ -18,14 +18,6 @@ type Block struct {
 	Nonce                 int
 }
 
-type Transaction struct {
-	AddressSender    uint32  `json:"-"`
-	AddressRecipient uint32  `json:"addressRecipient"`
-	Sum              float64 `json:"sum"`
-	Gas              float64 `json:"-"`
-	CreatedAt        int64   `json:"createdAt"`
-}
-
 func NewBlock(ctx context.Context, db *mongo.Collection, prevBlockHash []byte, prevBlockNumber int) *Block {
 	block := &Block{
 		time.Now().Unix(),

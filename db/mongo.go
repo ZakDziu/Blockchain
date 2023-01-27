@@ -4,6 +4,7 @@ import (
 	"blockchain/block"
 	"blockchain/user"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -39,7 +40,6 @@ func GetDB(ctx context.Context) *Mongo {
 	}
 	collBlocks := client.Database("db").Collection("blocks")
 	collUsers := client.Database("db").Collection("users")
-
 	return &Mongo{ctx: ctx, Client: client, DB: &Collections{
 		User:  collUsers,
 		Block: collBlocks,
@@ -71,37 +71,91 @@ func (m *Mongo) GetLastBlock() (block.Block, error) {
 	return lastBlock, err
 }
 
-func (m *Mongo) GetAllBlocks(hashId string, addressSender, addressRecipient uint32, blockNumer int, transactionCreatedAt int64, page, pageSize int) []*block.Block {
+func (m *Mongo) GetAllBlocks(hashId string, addressSender, addressRecipient string, blockNumer int, transactionCreatedAt int64, page, pageSize int) []*block.Block {
 	var blocks []*block.Block
 	filter := bson.M{}
-	if hashId != "" {
-	}
-	if addressSender != 0 {
-		filter["data"] = bson.M{"$elemMatch": bson.M{"addresssender": addressSender}}
-		if addressRecipient != 0 {
-			filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressSender}, {"addressrecipient": addressRecipient}}}}
-			if transactionCreatedAt != 0 {
-				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressSender}, {"addressrecipient": addressRecipient}, {"createdat": transactionCreatedAt}}}}
+	if addressSender != "" {
+		// 1,0,0,0
+		addressS, _ := hex.DecodeString(addressSender)
 
+		filter["data"] = bson.M{"$elemMatch": bson.M{"addresssender": addressS}}
+		if addressRecipient != "" {
+			//1,1,0,0
+			addressR, _ := hex.DecodeString(addressRecipient)
+
+			filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"addressrecipient": addressR}}}}
+			if transactionCreatedAt != 0 {
+				//1,1,1,0
+				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"addressrecipient": addressR}, {"createdat": transactionCreatedAt}}}}
+				if hashId != "" {
+					//1,1,1,1
+					h, _ := hex.DecodeString(hashId)
+
+					filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"addressrecipient": addressR}, {"createdat": transactionCreatedAt}, {"id": h}}}}
+				}
+			}
+			if hashId != "" {
+				//1,1,0,1
+				h, _ := hex.DecodeString(hashId)
+
+				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"addressrecipient": addressR}, {"id": h}}}}
 			}
 		}
 		if transactionCreatedAt != 0 {
-			filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressSender}, {"createdat": transactionCreatedAt}}}}
+			//1,0,1,0
+			filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"createdat": transactionCreatedAt}}}}
+			if hashId != "" {
+				//1,0,1,1
+				h, _ := hex.DecodeString(hashId)
 
+				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"createdat": transactionCreatedAt}, {"id": h}}}}
+			}
+		}
+		if hashId != "" {
+			//1,0,0,1
+			h, _ := hex.DecodeString(hashId)
+
+			filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"id": h}}}}
 		}
 	} else {
-		if addressRecipient != 0 {
-			filter["data"] = bson.M{"$elemMatch": bson.M{"addressrecipient": addressRecipient}}
-			if transactionCreatedAt != 0 {
-				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addressrecipient": addressRecipient}, {"createdat": transactionCreatedAt}}}}
+		if addressRecipient != "" {
+			//0,1,0,0
+			addressR, _ := hex.DecodeString(addressRecipient)
 
+			filter["data"] = bson.M{"$elemMatch": bson.M{"addressrecipient": addressR}}
+			if transactionCreatedAt != 0 {
+				//0,1,1,0
+				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addressrecipient": addressR}, {"createdat": transactionCreatedAt}}}}
+				if hashId != "" {
+					//0,1,1,1
+					h, _ := hex.DecodeString(hashId)
+
+					filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addressrecipient": addressR}, {"createdat": transactionCreatedAt}, {"id": h}}}}
+				}
+			}
+			if hashId != "" {
+				//0,1,0,1
+				h, _ := hex.DecodeString(hashId)
+
+				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addressrecipient": addressR}, {"id": h}}}}
 			}
 		} else {
 			if transactionCreatedAt != 0 {
+				//0,0,1,0
 				filter["data"] = bson.M{"$elemMatch": bson.M{"createdat": transactionCreatedAt}}
+				if hashId != "" {
+					//0,0,1,1
+					h, _ := hex.DecodeString(hashId)
 
+					filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"createdat": transactionCreatedAt}, {"id": h}}}}
+				}
 			}
 		}
+	}
+	if hashId != "" {
+		//0,0,0,1
+		h, _ := hex.DecodeString(hashId)
+		filter["data"] = bson.M{"$elemMatch": bson.M{"id": h}}
 	}
 	if blockNumer != 0 {
 		filter["blocknumber"] = blockNumer
@@ -142,10 +196,7 @@ func (m *Mongo) CreateNewUser(newUser user.User) (user.User, error) {
 
 func (m *Mongo) GetUserByName(name string) bool {
 	var u user.User
-	err := m.DB.User.FindOne(m.ctx, bson.M{"name": name}).Decode(&u)
-	if err != nil {
-		log.Panic(err)
-	}
+	_ = m.DB.User.FindOne(m.ctx, bson.M{"name": name}).Decode(&u)
 	if u.ID != primitive.NilObjectID {
 		return true
 	}
@@ -171,7 +222,6 @@ func (m *Mongo) UpdatesWithCreateNewTransaction(t block.Transaction) error {
 	var sender user.User
 	var recipient user.User
 	var admin user.User
-
 	lastBlock, err := m.GetLastBlock()
 	if err != nil {
 		return err
@@ -194,7 +244,7 @@ func (m *Mongo) UpdatesWithCreateNewTransaction(t block.Transaction) error {
 	filterRecipient := bson.D{{"address", t.AddressRecipient}}
 	err = m.DB.User.FindOne(m.ctx, filterRecipient).Decode(&recipient)
 
-	filterAdmin := bson.D{{"name", user.AdminName}}
+	filterAdmin := bson.D{{"address", user.AdminAddress}}
 	err = m.DB.User.FindOne(m.ctx, filterAdmin).Decode(&admin)
 
 	updateSender := bson.M{"$set": bson.M{"balance": sender.Balance - t.Sum - t.Gas}}

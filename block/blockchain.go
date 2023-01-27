@@ -29,12 +29,13 @@ func NewGenesisBlock(ctx context.Context, db *mongo.Collection) *Block {
 	var lastBlock Block
 	err := db.FindOne(ctx, bson.M{}, opts).Decode(&lastBlock)
 	if err != nil {
-		log.Panic(err)
+		return NewBlock(ctx, db, []byte{}, -1)
 	}
 	if lastBlock.Timestamp != 0 {
 		return NewBlock(ctx, db, lastBlock.Hash, lastBlock.BlockNumber)
 	}
 	return NewBlock(ctx, db, []byte{}, -1)
+
 }
 
 func NewBlockchain(ctx context.Context, db *mongo.Collection) *Blockchain {

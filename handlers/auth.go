@@ -5,6 +5,7 @@ import (
 	"blockchain/db"
 	"blockchain/user"
 	"encoding/json"
+	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
@@ -18,7 +19,8 @@ type ErrorResponse struct {
 }
 
 type TokenResponse struct {
-	Token string `json:"token"`
+	Token   string `json:"token"`
+	Address string `json:"address"`
 }
 
 type SignRequest struct {
@@ -56,7 +58,7 @@ func SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		return
 	}
 	body.CreatedAt = time.Now().Unix()
-	body.GenerateUserAddress()
+	body.AddAddress()
 	u, err := mongo.CreateNewUser(body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -70,7 +72,7 @@ func SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		return
 	}
 	token, err := auth.GenerateJWT(u)
-	response := TokenResponse{Token: token}
+	response := TokenResponse{Token: token, Address: fmt.Sprintf("%x", body.Address)}
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		log.Panic(err)
@@ -108,7 +110,7 @@ func SignIn(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		return
 	}
 	token, err := auth.GenerateJWT(u)
-	response := TokenResponse{Token: token}
+	response := TokenResponse{Token: token, Address: fmt.Sprintf("%x", u.Address)}
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		log.Panic(err)
