@@ -170,7 +170,7 @@ func (m *Mongo) GetAllBlocks(hashId string, addressSender, addressRecipient stri
 		opt.SetLimit(int64(pageSize))
 	} else {
 		opt.SetSkip(0)
-		opt.SetLimit(0)
+		opt.SetLimit(1000)
 	}
 	cur, err := m.DB.Block.Find(m.ctx, filter, opt)
 	if err != nil {
