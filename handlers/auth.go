@@ -55,7 +55,7 @@ func (ctr *AuthHandler) SignUp(c *gin.Context) {
 	body.CreatedAt = time.Now().Unix()
 	body.AddAddress()
 
-	u, err := ctr.api.MongoDB.CreateNewUser(body)
+	u, err := ctr.api.MongoDB.CreateNewUser(&body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.NewError(http.StatusInternalServerError, err.Error()))
 
@@ -76,7 +76,7 @@ func (ctr *AuthHandler) SignIn(c *gin.Context) {
 		return
 	}
 
-	u, err := ctr.api.MongoDB.CheckUserCredentials(body.Name, body.Password)
+	u, err := ctr.api.MongoDB.CheckUserCredentials(body)
 	if u.ID == primitive.NilObjectID {
 		c.JSON(http.StatusBadRequest, model.ErrUserNotExist)
 		return

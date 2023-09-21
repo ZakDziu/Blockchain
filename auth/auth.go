@@ -21,7 +21,7 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-func GenerateJWT(u user.User) (string, error) {
+func GenerateJWT(u *user.User) (string, error) {
 	claims := Claims{
 		Username: u.Name,
 		Exp:      time.Now().Add(10 * time.Minute),

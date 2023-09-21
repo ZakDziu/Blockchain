@@ -1,12 +1,15 @@
 package user
 
 import (
-	"blockchain/utils"
 	"bytes"
 	"crypto/sha256"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"math"
 	"math/big"
+
+	"blockchain/utils"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var SenderAddress = []byte{0, 1, 225, 194, 49, 70, 157, 230, 199, 233, 13, 221, 133, 106, 143, 114, 254, 26, 21, 17, 13, 103, 50, 154, 65, 118, 178, 144, 155, 48, 240, 231}
@@ -26,6 +29,21 @@ type User struct {
 	CreatedAt int64
 	Address   []byte
 	Balance   float64 `bson:"balance"`
+}
+
+func (u *User) HashPassword() error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	u.Password = string(hashedPassword)
+	return nil
+}
+
+func VerifyPassword(hashedPassword, password string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+	return err == nil
 }
 
 func (u *User) prepareData(nonce int) []byte {

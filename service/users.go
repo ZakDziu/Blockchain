@@ -1,10 +1,11 @@
 package service
 
 import (
-	"blockchain/db"
-	"blockchain/user"
 	"log"
 	"time"
+
+	"blockchain/db"
+	"blockchain/user"
 )
 
 func CreateUsers(mongo *db.Mongo) {
@@ -31,19 +32,19 @@ func CreateUsers(mongo *db.Mongo) {
 	admin.AddAddress()
 
 	if !mongo.GetUserByName(sender.Name) {
-		_, err := mongo.CreateNewUser(sender)
+		_, err := mongo.CreateNewUser(&sender)
 		if err != nil {
 			log.Panic(err)
 		}
 	}
 	if !mongo.GetUserByName(recipient.Name) {
-		_, err := mongo.CreateNewUser(recipient)
+		_, err := mongo.CreateNewUser(&recipient)
 		if err != nil {
 			log.Panic(err)
 		}
 	}
 	if !mongo.GetUserByName(admin.Name) {
-		_, err := mongo.CreateNewUser(admin)
+		_, err := mongo.CreateNewUser(&admin)
 		if err != nil {
 			log.Panic(err)
 		}

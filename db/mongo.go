@@ -195,9 +195,14 @@ func (m *Mongo) GetAllBlocks(req model.BlockRequest) []*block.Block {
 	return blocks
 }
 
-func (m *Mongo) CreateNewUser(newUser user.User) (user.User, error) {
+func (m *Mongo) CreateNewUser(newUser *user.User) (*user.User, error) {
 	newUser.ID = primitive.NewObjectID()
-	_, err := m.DB.User.InsertOne(m.ctx, newUser)
+	err := newUser.HashPassword()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = m.DB.User.InsertOne(m.ctx, newUser)
 	return newUser, err
 }
 
@@ -219,9 +224,13 @@ func (m *Mongo) CheckExistUser(name string) (bool, error) {
 	return false, err
 }
 
-func (m *Mongo) CheckUserCredentials(name string, password string) (user.User, error) {
-	var registeredUser user.User
-	err := m.DB.User.FindOne(m.ctx, bson.M{"name": name, "password": password}).Decode(&registeredUser)
+func (m *Mongo) CheckUserCredentials(req user.User) (*user.User, error) {
+	var registeredUser *user.User
+	err := req.HashPassword()
+	if err != nil {
+		return nil, err
+	}
+	err = m.DB.User.FindOne(m.ctx, bson.M{"name": req.Name, "password": req.Password}).Decode(&registeredUser)
 	return registeredUser, err
 }
 
