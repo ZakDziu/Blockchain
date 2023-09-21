@@ -1,37 +1,35 @@
 package main
 
 import (
-	"blockchain/block"
-	"blockchain/db"
-	"blockchain/handlers"
-	"blockchain/service"
-	"context"
 	"fmt"
-	"github.com/julienschmidt/httprouter"
-	"log"
-	"net/http"
+
+	"blockchain/block"
+	"blockchain/handlers"
+	"blockchain/routes"
+	"blockchain/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	ctx := context.TODO()
-	mongo := db.GetDB(ctx)
-	defer mongo.DeleteDataAndCloseConnection(ctx)
+	api := handlers.NewApi()
+	defer api.MongoDB.DeleteDataAndCloseConnection(api.Ctx)
 
-	bc := block.NewBlockchain(ctx, mongo.DB.Block)
-	service.CreateUsers(mongo)
+	bc := block.NewBlockchain(api.Ctx, api.MongoDB.DB.Block)
+	service.CreateUsers(api.MongoDB)
 	go service.StartAddBlockService(bc)
-	go service.StartMakeTransactions(mongo)
+	go service.StartMakeTransactions(api.MongoDB)
 
 	fmt.Println("Server listening!")
-	log.Fatal(http.ListenAndServe(":8989", router()))
-}
+	authHandler := handlers.NewAuthHandler(api)
+	blockHandler := handlers.NewBlocksHandler(api)
 
-func router() *httprouter.Router {
-	r := httprouter.New()
-	r.POST("/sign-up", handlers.SignUp)
-	r.POST("/sign-in", handlers.SignIn)
-	r.POST("/transaction", handlers.NewTransaction)
-	r.GET("/blocks", handlers.Blocks)
+	r := routes.NewRouter(gin.Default(),
+		authHandler,
+		blockHandler,
+	)
 
-	return r
+	r.SetupRouter()
+
+	r.Server.Run(":8000")
 }

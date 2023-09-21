@@ -1,16 +1,17 @@
 package service
 
 import (
+	"log"
+	"time"
+
 	"blockchain/block"
 	"blockchain/db"
 	"blockchain/user"
-	"log"
-	"time"
 )
 
 func StartMakeTransactions(mongo *db.Mongo) {
 	time.Sleep(5 * time.Second)
-	transaction := block.Transaction{
+	transaction := &block.Transaction{
 		AddressSender:    user.SenderAddress,
 		AddressRecipient: user.RecipientAddress,
 		Sum:              1,

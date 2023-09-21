@@ -1,119 +1,89 @@
 package handlers
 
 import (
-	"blockchain/auth"
-	"blockchain/db"
-	"blockchain/user"
-	"encoding/json"
 	"fmt"
-	"github.com/julienschmidt/httprouter"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"log"
 	"net/http"
 	"time"
+
+	"blockchain/auth"
+	"blockchain/internal/types"
+	"blockchain/model"
+	"blockchain/user"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type ErrorResponse struct {
-	Error  string `json:"error"`
-	Status int    `json:"status"`
+type AuthHandlerInterface interface {
+	types.Controller
+	SignUp(c *gin.Context)
+	SignIn(c *gin.Context)
 }
 
-type TokenResponse struct {
-	Token   string `json:"token"`
-	Address string `json:"address"`
+type AuthHandler struct {
+	api *Api
 }
 
-type SignRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+func NewAuthHandler(a *Api) AuthHandlerInterface {
+	return &AuthHandler{
+		api: a,
+	}
 }
 
-func SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	w.Header().Set("Content-Type", "application/json")
+func (ctr *AuthHandler) RegisterRoutes(r *gin.RouterGroup) {
+	r.POST("/sign-up", ctr.SignUp)
+	r.POST("/sign-up", ctr.SignIn)
+
+}
+
+func (ctr *AuthHandler) SignUp(c *gin.Context) {
 	var body user.User
-	ctx := r.Context()
-	err := json.NewDecoder(r.Body).Decode(&body)
+
+	err := c.ShouldBindJSON(&body)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		err = json.NewEncoder(w).Encode(ErrorResponse{
-			Error:  err.Error(),
-			Status: http.StatusInternalServerError,
-		})
-		if err != nil {
-			log.Panic(err)
-		}
+		c.JSON(http.StatusBadRequest, model.ErrUnhealthy)
 		return
 	}
-	mongo := db.GetDB(ctx)
-	b, err := mongo.CheckExistUser(body.Name)
+
+	b, err := ctr.api.MongoDB.CheckExistUser(body.Name)
 	if b {
-		w.WriteHeader(http.StatusBadRequest)
-		err = json.NewEncoder(w).Encode(ErrorResponse{
-			Error:  "User with this username exist",
-			Status: http.StatusBadRequest,
-		})
-		if err != nil {
-			log.Panic(err)
-		}
+		c.JSON(http.StatusBadRequest, model.ErrUserWithThisNameExist)
+
 		return
 	}
+
 	body.CreatedAt = time.Now().Unix()
 	body.AddAddress()
-	u, err := mongo.CreateNewUser(body)
+
+	u, err := ctr.api.MongoDB.CreateNewUser(body)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		err = json.NewEncoder(w).Encode(ErrorResponse{
-			Error:  err.Error(),
-			Status: http.StatusInternalServerError,
-		})
-		if err != nil {
-			log.Panic(err)
-		}
+		c.JSON(http.StatusInternalServerError, model.NewError(http.StatusInternalServerError, err.Error()))
+
 		return
 	}
+
 	token, err := auth.GenerateJWT(u)
-	response := TokenResponse{Token: token, Address: fmt.Sprintf("%x", body.Address)}
-	err = json.NewEncoder(w).Encode(response)
-	if err != nil {
-		log.Panic(err)
-	}
-	return
+	response := model.TokenResponse{Token: token, Address: fmt.Sprintf("%x", body.Address)}
+
+	c.JSON(http.StatusOK, response)
 }
 
-func SignIn(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	w.Header().Set("Content-Type", "application/json")
+func (ctr *AuthHandler) SignIn(c *gin.Context) {
 	var body user.User
-	ctx := r.Context()
-	err := json.NewDecoder(r.Body).Decode(&body)
+	err := c.ShouldBindJSON(&body)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		err = json.NewEncoder(w).Encode(ErrorResponse{
-			Error:  err.Error(),
-			Status: http.StatusBadRequest,
-		})
-		if err != nil {
-			log.Panic(err)
-		}
+		c.JSON(http.StatusBadRequest, model.ErrUnhealthy)
 		return
 	}
-	mongo := db.GetDB(ctx)
-	u, err := mongo.CheckUserCredentials(body.Name, body.Password)
+
+	u, err := ctr.api.MongoDB.CheckUserCredentials(body.Name, body.Password)
 	if u.ID == primitive.NilObjectID {
-		w.WriteHeader(http.StatusBadRequest)
-		err = json.NewEncoder(w).Encode(ErrorResponse{
-			Error:  "User not exist",
-			Status: http.StatusBadRequest,
-		})
-		if err != nil {
-			log.Panic(err)
-		}
+		c.JSON(http.StatusBadRequest, model.ErrUserNotExist)
 		return
 	}
+
 	token, err := auth.GenerateJWT(u)
-	response := TokenResponse{Token: token, Address: fmt.Sprintf("%x", u.Address)}
-	err = json.NewEncoder(w).Encode(response)
-	if err != nil {
-		log.Panic(err)
-	}
-	return
+	response := model.TokenResponse{Token: token, Address: fmt.Sprintf("%x", u.Address)}
+
+	c.JSON(http.StatusOK, response)
 }

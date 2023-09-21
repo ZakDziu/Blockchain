@@ -2,15 +2,16 @@ package block
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 	"log"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Block struct {
 	Timestamp             int64
-	Data                  []Transaction
+	Data                  []*Transaction
 	PrevBlockHash         []byte
 	Hash                  []byte
 	NumberOfConfirmations int
@@ -21,7 +22,7 @@ type Block struct {
 func NewBlock(ctx context.Context, db *mongo.Collection, prevBlockHash []byte, prevBlockNumber int) *Block {
 	block := &Block{
 		time.Now().Unix(),
-		[]Transaction{},
+		[]*Transaction{},
 		prevBlockHash,
 		[]byte{},
 		0,

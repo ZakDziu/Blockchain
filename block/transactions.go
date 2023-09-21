@@ -1,10 +1,17 @@
 package block
 
 import (
-	"blockchain/utils"
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"math/big"
+	"time"
+
+	"blockchain/auth"
+	"blockchain/model"
+	"blockchain/utils"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Transaction struct {
@@ -50,4 +57,28 @@ func (t *Transaction) AddTransactionHash() {
 	}
 	h := hash[:]
 	t.ID = h[:]
+}
+
+func CreateNewTransaction(c *gin.Context, req model.TransactionRequest) (*Transaction, error) {
+	var err error
+
+	addressRecipient, _ := hex.DecodeString(req.AddressRecipient)
+	transaction := &Transaction{
+		AddressSender:    nil,
+		AddressRecipient: addressRecipient,
+		Sum:              req.Sum,
+		Gas:              0,
+		CreatedAt:        0,
+	}
+
+	transaction.AddressSender, err = auth.GetUserAddress(c)
+	if err != nil {
+		return nil, err
+	}
+
+	transaction.CreatedAt = time.Now().Unix()
+	transaction.CalculateGas()
+	transaction.AddTransactionHash()
+
+	return transaction, nil
 }

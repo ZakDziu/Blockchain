@@ -1,18 +1,20 @@
 package auth
 
 import (
-	"blockchain/user"
 	"errors"
+	"time"
+
+	"blockchain/user"
+
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"time"
 )
 
 var sampleSecretKey = "this is my secret key"
 
 type Claims struct {
 	Username string             `json:"username"`
-	Password string             `json:"password"`
 	Exp      time.Time          `json:"exp"`
 	Id       primitive.ObjectID `json:"id"`
 	Address  []byte             `json:"address"`
@@ -22,7 +24,6 @@ type Claims struct {
 func GenerateJWT(u user.User) (string, error) {
 	claims := Claims{
 		Username: u.Name,
-		Password: u.Password,
 		Exp:      time.Now().Add(10 * time.Minute),
 		Id:       u.ID,
 		Address:  u.Address,
@@ -36,10 +37,10 @@ func GenerateJWT(u user.User) (string, error) {
 	return tokenString, nil
 }
 
-func GetUserAddress(tokenString string) ([]byte, error) {
+func GetUserAddress(c *gin.Context) ([]byte, error) {
 	claims := &Claims{}
 
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(c.Request.Header["Authorization"][0], claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(sampleSecretKey), nil
 	})
 	if err != nil {

@@ -1,18 +1,25 @@
 package db
 
 import (
-	"blockchain/block"
-	"blockchain/user"
 	"context"
 	"encoding/hex"
 	"fmt"
+	"log"
+
+	"blockchain/block"
+	"blockchain/config"
+	"blockchain/model"
+	"blockchain/user"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
-	"log"
 )
+
+const mongoCollectionBlocks = "blocks"
+const mongoCollectionUsers = "users"
 
 type Mongo struct {
 	ctx    context.Context
@@ -25,8 +32,8 @@ type Collections struct {
 	Block *mongo.Collection
 }
 
-func GetDB(ctx context.Context) *Mongo {
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://127.0.0.1:27017"))
+func GetDB(ctx context.Context, config *config.DBConfig) *Mongo {
+	client, err := mongo.NewClient(options.Client().ApplyURI(config.MongoURI))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,8 +45,8 @@ func GetDB(ctx context.Context) *Mongo {
 	if err != nil {
 		log.Fatal(err)
 	}
-	collBlocks := client.Database("db").Collection("blocks")
-	collUsers := client.Database("db").Collection("users")
+	collBlocks := client.Database(config.MongoDB).Collection(mongoCollectionBlocks)
+	collUsers := client.Database(config.MongoDB).Collection(mongoCollectionUsers)
 	return &Mongo{ctx: ctx, Client: client, DB: &Collections{
 		User:  collUsers,
 		Block: collBlocks,
@@ -64,110 +71,110 @@ func (m *Mongo) DeleteDataAndCloseConnection(ctx context.Context) {
 	fmt.Println("Connection to MongoDB closed.")
 }
 
-func (m *Mongo) GetLastBlock() (block.Block, error) {
+func (m *Mongo) GetLastBlock() (*block.Block, error) {
 	opts := options.FindOne().SetSort(bson.M{"$natural": -1})
-	var lastBlock block.Block
+	var lastBlock *block.Block
 	err := m.DB.Block.FindOne(m.ctx, bson.M{}, opts).Decode(&lastBlock)
 	return lastBlock, err
 }
 
-func (m *Mongo) GetAllBlocks(hashId string, addressSender, addressRecipient string, blockNumer int, transactionCreatedAt int64, page, pageSize int) []*block.Block {
+func (m *Mongo) GetAllBlocks(req model.BlockRequest) []*block.Block {
 	var blocks []*block.Block
 	filter := bson.M{}
-	if addressSender != "" {
+	if req.AddressSender != "" {
 		// 1,0,0,0
-		addressS, _ := hex.DecodeString(addressSender)
+		addressS, _ := hex.DecodeString(req.AddressSender)
 
 		filter["data"] = bson.M{"$elemMatch": bson.M{"addresssender": addressS}}
-		if addressRecipient != "" {
+		if req.AddressRecipient != "" {
 			//1,1,0,0
-			addressR, _ := hex.DecodeString(addressRecipient)
+			addressR, _ := hex.DecodeString(req.AddressRecipient)
 
 			filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"addressrecipient": addressR}}}}
-			if transactionCreatedAt != 0 {
+			if req.TransactionCreatedAt != 0 {
 				//1,1,1,0
-				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"addressrecipient": addressR}, {"createdat": transactionCreatedAt}}}}
-				if hashId != "" {
+				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"addressrecipient": addressR}, {"createdat": req.TransactionCreatedAt}}}}
+				if req.HashID != "" {
 					//1,1,1,1
-					h, _ := hex.DecodeString(hashId)
+					h, _ := hex.DecodeString(req.HashID)
 
-					filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"addressrecipient": addressR}, {"createdat": transactionCreatedAt}, {"id": h}}}}
+					filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"addressrecipient": addressR}, {"createdat": req.TransactionCreatedAt}, {"id": h}}}}
 				}
 			}
-			if hashId != "" {
+			if req.HashID != "" {
 				//1,1,0,1
-				h, _ := hex.DecodeString(hashId)
+				h, _ := hex.DecodeString(req.HashID)
 
 				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"addressrecipient": addressR}, {"id": h}}}}
 			}
 		}
-		if transactionCreatedAt != 0 {
+		if req.TransactionCreatedAt != 0 {
 			//1,0,1,0
-			filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"createdat": transactionCreatedAt}}}}
-			if hashId != "" {
+			filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"createdat": req.TransactionCreatedAt}}}}
+			if req.HashID != "" {
 				//1,0,1,1
-				h, _ := hex.DecodeString(hashId)
+				h, _ := hex.DecodeString(req.HashID)
 
-				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"createdat": transactionCreatedAt}, {"id": h}}}}
+				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"createdat": req.TransactionCreatedAt}, {"id": h}}}}
 			}
 		}
-		if hashId != "" {
+		if req.HashID != "" {
 			//1,0,0,1
-			h, _ := hex.DecodeString(hashId)
+			h, _ := hex.DecodeString(req.HashID)
 
 			filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addresssender": addressS}, {"id": h}}}}
 		}
 	} else {
-		if addressRecipient != "" {
+		if req.AddressRecipient != "" {
 			//0,1,0,0
-			addressR, _ := hex.DecodeString(addressRecipient)
+			addressR, _ := hex.DecodeString(req.AddressRecipient)
 
 			filter["data"] = bson.M{"$elemMatch": bson.M{"addressrecipient": addressR}}
-			if transactionCreatedAt != 0 {
+			if req.TransactionCreatedAt != 0 {
 				//0,1,1,0
-				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addressrecipient": addressR}, {"createdat": transactionCreatedAt}}}}
-				if hashId != "" {
+				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addressrecipient": addressR}, {"createdat": req.TransactionCreatedAt}}}}
+				if req.HashID != "" {
 					//0,1,1,1
-					h, _ := hex.DecodeString(hashId)
+					h, _ := hex.DecodeString(req.HashID)
 
-					filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addressrecipient": addressR}, {"createdat": transactionCreatedAt}, {"id": h}}}}
+					filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addressrecipient": addressR}, {"createdat": req.TransactionCreatedAt}, {"id": h}}}}
 				}
 			}
-			if hashId != "" {
+			if req.HashID != "" {
 				//0,1,0,1
-				h, _ := hex.DecodeString(hashId)
+				h, _ := hex.DecodeString(req.HashID)
 
 				filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"addressrecipient": addressR}, {"id": h}}}}
 			}
 		} else {
-			if transactionCreatedAt != 0 {
+			if req.TransactionCreatedAt != 0 {
 				//0,0,1,0
-				filter["data"] = bson.M{"$elemMatch": bson.M{"createdat": transactionCreatedAt}}
-				if hashId != "" {
+				filter["data"] = bson.M{"$elemMatch": bson.M{"createdat": req.TransactionCreatedAt}}
+				if req.HashID != "" {
 					//0,0,1,1
-					h, _ := hex.DecodeString(hashId)
+					h, _ := hex.DecodeString(req.HashID)
 
-					filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"createdat": transactionCreatedAt}, {"id": h}}}}
+					filter["data"] = bson.M{"$elemMatch": bson.M{"$and": []bson.M{{"createdat": req.TransactionCreatedAt}, {"id": h}}}}
 				}
 			}
 		}
 	}
-	if hashId != "" {
+	if req.HashID != "" {
 		//0,0,0,1
-		h, _ := hex.DecodeString(hashId)
+		h, _ := hex.DecodeString(req.HashID)
 		filter["data"] = bson.M{"$elemMatch": bson.M{"id": h}}
 	}
-	if blockNumer != 0 {
-		filter["blocknumber"] = blockNumer
+	if req.BlockNumber != 0 {
+		filter["blocknumber"] = req.BlockNumber
 	}
 	opt := options.Find()
-	if page != 0 && pageSize != 0 {
-		if page == 1 {
+	if req.Page != 0 && req.PageSize != 0 {
+		if req.Page == 1 {
 			opt.SetSkip(0)
-			opt.SetLimit(int64(pageSize))
+			opt.SetLimit(int64(req.PageSize))
 		}
-		opt.SetSkip(int64((page - 1) * pageSize))
-		opt.SetLimit(int64(pageSize))
+		opt.SetSkip(int64((req.Page - 1) * req.PageSize))
+		opt.SetLimit(int64(req.PageSize))
 	} else {
 		opt.SetSkip(0)
 		opt.SetLimit(1000)
@@ -218,7 +225,7 @@ func (m *Mongo) CheckUserCredentials(name string, password string) (user.User, e
 	return registeredUser, err
 }
 
-func (m *Mongo) UpdatesWithCreateNewTransaction(t block.Transaction) error {
+func (m *Mongo) UpdatesWithCreateNewTransaction(t *block.Transaction) error {
 	var sender user.User
 	var recipient user.User
 	var admin user.User
